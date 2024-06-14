@@ -1,25 +1,32 @@
+import Control.Concurrent.Async (mapConcurrently)
+import Control.Exception (SomeException, try)
+import Data.Maybe (fromMaybe)
+import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import System.Directory (getCurrentDirectory)
-import Data.Time (getCurrentTime, formatTime, defaultTimeLocale)
 import System.Process (readProcess)
-import Control.Exception (try, SomeException)
+
+run :: (Traversable t) => t (IO (Maybe String)) -> IO ()
+run modules = do
+  results <- mapConcurrently id modules
+  let prompt = concatMap (fromMaybe "") results
+  putStrLn prompt
 
 main :: IO ()
 main = do
-    cwd <- getCurrentDirectory
-    time <- getCurrentTime
-    gitBranch <- getGitBranch
-    let timeStr = formatTime defaultTimeLocale "%H:%M:%S" time
-    putStrLn $ formatPrompt cwd gitBranch timeStr
+  run [getCurrentDirectoryIO, getTimeIO, getGitBranchIO]
 
-formatPrompt :: FilePath -> Maybe String -> String -> String
-formatPrompt cwd gitBranch timeStr =
-    "\ESC[34m" ++ cwd ++
-    maybe "" (\branch -> " \ESC[32m(" ++ branch ++ ")") gitBranch ++
-    " \ESC[33m[" ++ timeStr ++ "]\ESC[0m\n$ "
+getCurrentDirectoryIO :: IO (Maybe String)
+getCurrentDirectoryIO = Just <$> getCurrentDirectory
 
-getGitBranch :: IO (Maybe String)
-getGitBranch = do
-    result <- try (readProcess "git" ["rev-parse", "--abbrev-ref", "HEAD"] "") :: IO (Either SomeException String)
-    return $ case result of
-        Left _ -> Nothing
-        Right branch -> Just (init branch)
+getTimeIO :: IO (Maybe String)
+getTimeIO = do
+  time <- getCurrentTime
+  let timeStr = formatTime defaultTimeLocale "%H:%M:%S" time
+  return $ Just timeStr
+
+getGitBranchIO :: IO (Maybe String)
+getGitBranchIO = do
+  result <- try (readProcess "git" ["rev-parse", "--abbrev-ref", "HEAD"] "") :: IO (Either SomeException String)
+  return $ case result of
+    Left _ -> Nothing
+    Right branch -> Just (init branch)

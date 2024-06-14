@@ -11,6 +11,7 @@ executable prompt
     ghc-options:      -Wall
     build-depends:
         base ^>=4.17.2.1,
+        async,
         directory,
         process,
         time
