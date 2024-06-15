@@ -1,13 +1,13 @@
-{-# LANGUAGE DeriveAnyClass #-}
-
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Exception (SomeException, try)
 import Data.Maybe (fromMaybe)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
+import GHC.IO.Exception (ExitCode)
 import System.Console.ANSI.Codes (Color (Blue), ColorIntensity (Vivid), ConsoleIntensity (BoldIntensity), ConsoleLayer (Foreground), SGR (Reset, SetColor, SetConsoleIntensity), setSGRCode)
 import System.Directory (getCurrentDirectory)
+import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath (takeFileName)
-import System.Process (readProcess)
+import System.Process (readProcessWithExitCode)
 
 run :: (Traversable t) => t (IO (Maybe String)) -> IO ()
 run modules = do
@@ -53,13 +53,17 @@ getTimeIO = do
 
 getGitBranchIO :: IO (Maybe String)
 getGitBranchIO = do
-  result <- try (readProcess "git" ["rev-parse", "--abbrev-ref", "HEAD"] "") :: IO (Either SomeException String)
+  result <- try (readProcessWithExitCode "git" ["rev-parse", "--abbrev-ref", "HEAD"] "") :: IO (Either SomeException (ExitCode, String, String))
   return $ case result of
     Left _ -> Nothing
-    Right branch ->
-      Just
-        ( "on "
-            ++ setSGRCode [SetColor Foreground Vivid Blue]
-            ++ "\xe725 "
-            ++ init branch
-        )
+    Right (exitCode, branch, _) ->
+      if exitCode == ExitSuccess
+        then
+          Just
+            ( "on "
+                ++ setSGRCode [SetColor Foreground Vivid Blue]
+                ++ "\xe725 "
+                ++ branch
+            )
+        else
+          Nothing
