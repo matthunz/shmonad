@@ -1,57 +1,61 @@
-import Control.Concurrent.Async (mapConcurrently)
-import Control.Exception (SomeException, try)
-import Data.Maybe (fromMaybe)
-import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
-import GHC.IO.Exception (ExitCode)
-import System.Console.ANSI.Codes (Color (Blue), ColorIntensity (Vivid), ConsoleIntensity (BoldIntensity), ConsoleLayer (Foreground), SGR (Reset, SetColor, SetConsoleIntensity), setSGRCode)
-import System.Directory (getCurrentDirectory)
-import System.Exit (ExitCode (ExitSuccess))
-import System.FilePath (takeFileName)
+module Main where
+
+import Control.Exception (SomeException)
+import Control.Exception.Base (try)
+import GHC.IO.Exception (ExitCode (ExitSuccess))
+import Options.Applicative
+import System.Environment.XDG.BaseDir (getUserConfigDir, getUserDataDir)
+import System.FilePath ((</>))
 import System.Process (readProcessWithExitCode)
 
-main :: IO ()
-main = do
-  run
-    [ currentDirectoryModule,
-      gitBranchModule
-    ]
+data Args = Args
+  {sRecompile :: Bool}
 
-run :: [IO (Maybe String)] -> IO ()
-run modules = do
-  results <- mapConcurrently id modules
-  let prompt = unwords (map (fromMaybe "") results)
-  putStrLn prompt
-
-currentDirectoryModule :: IO (Maybe String)
-currentDirectoryModule = do
-  currentDir <- getCurrentDirectory
-  let lastPart = takeFileName currentDir
-  return $
-    Just
-      ( setSGRCode [SetColor Foreground Vivid Blue, SetConsoleIntensity BoldIntensity]
-          ++ lastPart
-          ++ setSGRCode [Reset]
+args :: Parser Args
+args =
+  Args
+    <$> switch
+      ( long "recompile"
+          <> short 'r'
+          <> help "Whether to recompile"
       )
 
-timeModule :: IO (Maybe String)
-timeModule = do
-  time <- getCurrentTime
-  let timeStr = formatTime defaultTimeLocale "%H:%M:%S" time
-  return $ Just timeStr
+main :: IO ()
+main = run =<< execParser opts
+  where
+    opts =
+      info
+        (args <**> helper)
+        (fullDesc <> progDesc "Shell prompt")
 
-gitBranchModule :: IO (Maybe String)
-gitBranchModule = do
-  result <- try (readProcessWithExitCode "git" ["rev-parse", "--abbrev-ref", "HEAD"] "") :: IO (Either SomeException (ExitCode, String, String))
-  return $ case result of
-    Left _ -> Nothing
-    Right (exitCode, branch, _) ->
-      if exitCode == ExitSuccess
-        then
-          Just
-            ( "on "
-                ++ setSGRCode [SetColor Foreground Vivid Blue]
-                ++ "\xe725 "
-                ++ branch
-            )
-        else
-          Nothing
+run :: Args -> IO ()
+run (Args True) = recompile
+run _ = return ()
+
+recompile :: IO ()
+recompile =
+  let appName = "prompt"
+   in do
+        dataDir <- getUserDataDir ""
+        configDir <- getUserConfigDir ""
+
+        let binPath = dataDir </> appName
+
+        result <-
+          try
+            ( readProcessWithExitCode
+                "ghc"
+                [ "-o",
+                  binPath,
+                  configDir </> "prompt" </> "prompt.hs"
+                ]
+                ""
+            ) ::
+            IO (Either SomeException (ExitCode, String, String))
+
+        case result of
+          Left e -> print e
+          Right (exitCode, _, stderr) -> do
+            if exitCode == ExitSuccess
+              then return ()
+              else putStrLn stderr
