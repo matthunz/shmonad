@@ -20,7 +20,7 @@ executable prompt
         xdg-basedir >= 0.2,
         optparse-applicative >= 0.18
 
-library prompt-lib
+library
     exposed-modules:
         Prompt
     hs-source-dirs:   app

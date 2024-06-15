@@ -11,13 +11,6 @@ import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath (takeFileName)
 import System.Process (readProcessWithExitCode)
 
-main :: IO ()
-main = do
-  run
-    [ currentDirectoryModule,
-      gitBranchModule
-    ]
-
 run :: [IO (Maybe String)] -> IO ()
 run modules = do
   results <- mapConcurrently id modules
