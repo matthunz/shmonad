@@ -7,9 +7,9 @@ import GHC.IO.Exception (ExitCode (ExitSuccess))
 import Options.Applicative
 import System.Environment.XDG.BaseDir (getUserConfigDir, getUserDataDir)
 import System.FilePath ((</>))
-import System.Process (readProcessWithExitCode)
+import System.Process (cwd, proc, readCreateProcessWithExitCode, readProcessWithExitCode)
 
-data Args = Args
+newtype Args = Args
   {aRecompile :: Bool}
 
 args :: Parser Args
@@ -33,9 +33,11 @@ appName :: String
 appName = "prompt"
 
 run :: Args -> IO ()
-run args = do
-  when (aRecompile args) recompile
+run (Args True) = recompile
+run (Args False) = prompt
 
+prompt :: IO ()
+prompt = do
   dataDir <- getUserDataDir ""
   let binPath = dataDir </> appName
 
@@ -57,17 +59,14 @@ recompile = do
   configDir <- getUserConfigDir ""
 
   let binPath = dataDir </> appName
+  let appConfigDir = configDir </> "prompt"
 
   result <-
     try
-      ( readProcessWithExitCode
-          "stack"
-          [ "ghc",
-            "--",
-            "-o",
-            binPath,
-            configDir </> "prompt" </> "config.hs"
-          ]
+      ( readCreateProcessWithExitCode
+          (proc "stack" ["ghc", "--", "-o", binPath, appConfigDir </> "config.hs"])
+            { cwd = Just appConfigDir
+            }
           ""
       ) ::
       IO (Either SomeException (ExitCode, String, String))
