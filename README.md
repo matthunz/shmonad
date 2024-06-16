@@ -1,5 +1,12 @@
 ![Demo](https://github.com/matthunz/prompt/blob/main/demo.png?raw=true)
 
+A shell prompt with infinite customization.
+
+## Features
+- Extensible: Configure your prompt with a Haskell domain specific language (eDSL)
+- High performance: Your prompt runs in parallel with traditional compiled Haskell
+- Easy to use: Don't worry about monads if you don't want, just copy a config and get going
+
 ## Installation
 
 By default the CLI will follow the [XDG](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) specification
@@ -52,4 +59,10 @@ packages:
 Finally, you can install the CLI with:
 ```
 stack install
+```
+
+## Usage
+You can recompile your configuration by running:
+```
+prompt --recompile
 ```
