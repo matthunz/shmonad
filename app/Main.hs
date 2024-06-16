@@ -62,7 +62,7 @@ runInit =
         unlines
           [ "#!/bin/zsh",
             "setopt prompt_subst",
-            "function mkPrompt() { PROMPT=\"$(prompt)\" }",
+            "function mkPrompt() { PROMPT=\"$(shmonad)\" }",
             "typeset -a precmd_functions",
             "precmd_functions=(mkPrompt)"
           ]
