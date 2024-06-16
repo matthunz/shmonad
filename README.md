@@ -23,7 +23,7 @@ cd ~/.config/shmonad
 
 You can then create a new `config.hs` file, which will be the entrypoint of your configuration.
 ```hs
-import Prompt
+import ShMonad
 
 main = do
   run $
