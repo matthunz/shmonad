@@ -6,6 +6,9 @@ module Prompt
     currentDirectoryModule,
     gitBranchModule,
     run,
+    Segment (..),
+    path,
+    segment,
     textModule,
     Color (..),
     ColorIntensity (..),
@@ -40,7 +43,6 @@ instance Monad Prompt where
     case maybeValue of
       Nothing -> return Nothing
       Just value -> unPrompt (f value)
-
 
 instance (Monoid a) => Semigroup (Prompt a) where
   (<>) (Prompt a) (Prompt b) =
@@ -98,3 +100,36 @@ timeModule =
         let timeStr = formatTime defaultTimeLocale "%H:%M:%S" time
         return $ Just timeStr
    in Prompt f
+
+
+data Segment = Segment ColorIntensity Color (Prompt String)
+
+segment :: ColorIntensity -> Color -> Prompt String -> Prompt [Segment]
+segment intensity color prompt = pure [Segment intensity color prompt]
+
+path :: Prompt [Segment] -> Prompt String
+path p = p >>= \segments -> pathHelper segments True
+
+pathHelper :: [Segment] -> Bool -> Prompt String
+pathHelper ((Segment intensity color prompt) : segments) isFirst =
+  let f (Segment nextIntensity nextColor _) = (nextIntensity, nextColor)
+      next = fmap f (safeHead segments)
+   in pathSegment intensity color isFirst next prompt <> pathHelper segments False
+pathHelper _ _ = Prompt (pure Nothing)
+
+pathSegment :: ColorIntensity -> Color -> Bool -> Maybe (ColorIntensity, Color) -> Prompt String -> Prompt String
+pathSegment intensity color isFirst next m =
+  ( if isFirst
+      then textColor intensity color (textModule "\xE0B6")
+      else Prompt (pure Nothing)
+  )
+    <> backgroundColor intensity color m
+    <> let x = textColor intensity color $ textModule "\xE0B0"
+        in case next of
+             Just (nextIntensity, nextColor) -> backgroundColor nextIntensity nextColor x
+             Nothing -> x
+
+
+safeHead :: [a] -> Maybe a
+safeHead [] = Nothing
+safeHead (x : _) = Just x

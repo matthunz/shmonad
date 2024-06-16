@@ -17,10 +17,15 @@ You can then create a new `config.hs` file, which will be the entrypoint of your
 import Prompt
 
 main = do
-  run
-    [ currentDirectoryModule,
-      gitBranchModule
-    ]
+  run $
+    path
+      ( segment Dull Blue currentDirectoryModule
+          <> ( gitBranchModule
+                 >>= ( \branch ->
+                         segment Dull Cyan (textModule ("\xe725 " ++ branch))
+                     )
+             )
+      )
 ```
 
 ### Cloning from source
