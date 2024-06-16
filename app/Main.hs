@@ -2,24 +2,26 @@ module Main where
 
 import Control.Exception (SomeException)
 import Control.Exception.Base (try)
-import Control.Monad (when)
 import GHC.IO.Exception (ExitCode (ExitSuccess))
 import Options.Applicative
 import System.Environment.XDG.BaseDir (getUserConfigDir, getUserDataDir)
 import System.FilePath ((</>))
 import System.Process (cwd, proc, readCreateProcessWithExitCode, readProcessWithExitCode)
 
+data Command = Default | Init | Recompile
+
 newtype Args = Args
-  {aRecompile :: Bool}
+  {aRecompile :: Command}
 
 args :: Parser Args
 args =
   Args
-    <$> switch
-      ( long "recompile"
-          <> short 'r'
-          <> help "Whether to recompile"
-      )
+    <$> ( subparser
+            ( command "init" (info (pure Init) (progDesc "Initialize the shell prompt."))
+                <> command "recompile" (info (pure Recompile) (progDesc "Recompile the configuration."))
+            )
+            <|> pure Default
+        )
 
 main :: IO ()
 main = run =<< execParser opts
@@ -33,11 +35,12 @@ appName :: String
 appName = "prompt"
 
 run :: Args -> IO ()
-run (Args True) = recompile
-run (Args False) = prompt
+run (Args Default) = runPrompt
+run (Args Init) = runInit
+run (Args Recompile) = runRecompile
 
-prompt :: IO ()
-prompt = do
+runPrompt :: IO ()
+runPrompt = do
   dataDir <- getUserDataDir ""
   let binPath = dataDir </> appName
 
@@ -53,8 +56,20 @@ prompt = do
         then putStrLn stdout
         else putStrLn stderr
 
-recompile :: IO ()
-recompile = do
+runInit :: IO ()
+runInit =
+  let s =
+        unlines
+          [ "#!/bin/zsh",
+            "setopt prompt_subst",
+            "function mkPrompt() { PROMPT=\"$(prompt)\" }",
+            "typeset -a precmd_functions",
+            "precmd_functions=(mkPrompt)"
+          ]
+   in putStrLn s
+
+runRecompile :: IO ()
+runRecompile = do
   dataDir <- getUserDataDir ""
   configDir <- getUserConfigDir ""
 

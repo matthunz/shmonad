@@ -53,3 +53,9 @@ Finally, you can install the CLI with:
 ```
 stack install
 ```
+
+### Adding the prompt to your shell
+In your `.zshrc` add
+```sh
+eval "$(prompt init)"
+```
