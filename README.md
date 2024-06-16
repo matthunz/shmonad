@@ -26,7 +26,7 @@ You can then create a new `config.hs` file, which will be the entrypoint of your
 import ShMonad
 
 main = do
-  run $
+  shmonad $
     path $
       segment Dull Magenta userModule
         <> ( currentDirectoryModule
