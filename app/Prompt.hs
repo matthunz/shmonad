@@ -6,6 +6,7 @@ module Prompt
     run,
     textModule,
     Color (..),
+    ColorIntensity (..),
   )
 where
 
@@ -14,7 +15,7 @@ import Control.Exception (SomeException, try)
 import Data.Maybe (fromMaybe)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import GHC.IO.Exception (ExitCode)
-import System.Console.ANSI.Codes (Color (..), ColorIntensity (Vivid), ConsoleIntensity (BoldIntensity), ConsoleLayer (Background, Foreground), SGR (Reset, SetColor, SetConsoleIntensity), setSGRCode)
+import System.Console.ANSI.Codes (Color (..), ColorIntensity (..), ConsoleIntensity (BoldIntensity), ConsoleLayer (Background, Foreground), SGR (Reset, SetColor, SetConsoleIntensity), setSGRCode)
 import System.Directory (getCurrentDirectory)
 import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath (takeFileName)
@@ -31,15 +32,15 @@ run modules = do
 textModule :: String -> Module
 textModule s = [pure $ Just s]
 
-textColor :: Color -> Module -> Module
-textColor color m =
-  textModule (setSGRCode [SetColor Foreground Vivid color])
+textColor :: ColorIntensity -> Color -> Module -> Module
+textColor intensity color m =
+  textModule (setSGRCode [SetColor Foreground intensity color])
     ++ m
     ++ textModule (setSGRCode [Reset])
 
-backgroundColor :: Color -> Module -> Module
-backgroundColor color m =
-  textModule (setSGRCode [SetColor Background Vivid color])
+backgroundColor :: ColorIntensity -> Color -> Module -> Module
+backgroundColor intensity color m =
+  textModule (setSGRCode [SetColor Background intensity color])
     ++ m
     ++ textModule (setSGRCode [Reset])
 
