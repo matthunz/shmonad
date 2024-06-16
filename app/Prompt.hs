@@ -5,6 +5,7 @@ module Prompt
     textColor,
     currentDirectoryModule,
     gitBranchModule,
+    userModule,
     run,
     Segment (..),
     path,
@@ -23,6 +24,7 @@ import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import GHC.IO.Exception (ExitCode)
 import System.Console.ANSI.Codes (Color (..), ColorIntensity (..), ConsoleIntensity (BoldIntensity), ConsoleLayer (Background, Foreground), SGR (Reset, SetColor, SetConsoleIntensity), setSGRCode)
 import System.Directory (getCurrentDirectory)
+import System.Environment (getEnv)
 import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath (takeFileName)
 import System.Process (readProcessWithExitCode)
@@ -78,6 +80,15 @@ gitBranchModule =
               else Nothing
    in Prompt f
 
+userModule :: Prompt String
+userModule = 
+  let f = do
+        result <- try (getEnv "USER") :: IO (Either SomeException String)
+        return $ case result of
+          Left _ -> Nothing
+          Right name -> Just name
+  in Prompt f
+
 run :: Prompt String -> IO ()
 run (Prompt f) = f >>= \s -> putStr (fromMaybe "" s)
 
@@ -100,7 +111,6 @@ timeModule =
         let timeStr = formatTime defaultTimeLocale "%H:%M:%S" time
         return $ Just timeStr
    in Prompt f
-
 
 data Segment = Segment ColorIntensity Color (Prompt String)
 
@@ -128,7 +138,6 @@ pathSegment intensity color isFirst next m =
         in case next of
              Just (nextIntensity, nextColor) -> backgroundColor nextIntensity nextColor x
              Nothing -> x
-
 
 safeHead :: [a] -> Maybe a
 safeHead [] = Nothing

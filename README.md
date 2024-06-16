@@ -18,14 +18,14 @@ import Prompt
 
 main = do
   run $
-    path
-      ( segment Dull Blue currentDirectoryModule
-          <> ( gitBranchModule
-                 >>= ( \branch ->
-                         segment Dull Cyan (textModule ("\xe725 " ++ branch))
-                     )
-             )
-      )
+    path $
+      segment Dull Magenta userModule
+        <> ( currentDirectoryModule
+               >>= \dir -> segment Dull Blue $ textModule $ " \xf07b " ++ dir
+           )
+        <> ( gitBranchModule
+               >>= \branch -> segment Dull Cyan $ textModule $ " \xe725 " ++ branch
+           )
 ```
 
 ### Cloning from source
