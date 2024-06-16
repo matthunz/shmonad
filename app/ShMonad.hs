@@ -1,12 +1,12 @@
 {-# LANGUAGE GADTs #-}
 
-module Prompt
+module ShMonad
   ( backgroundColor,
     textColor,
     currentDirectoryModule,
     gitBranchModule,
     userModule,
-    run,
+    shmonad,
     Segment (..),
     path,
     segment,
@@ -29,16 +29,16 @@ import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath (takeFileName)
 import System.Process (readProcessWithExitCode)
 
-newtype Prompt a = Prompt {unPrompt :: IO (Maybe a)}
+newtype ShMonad a = Prompt {unPrompt :: IO (Maybe a)}
 
-instance Functor Prompt where
+instance Functor ShMonad where
   fmap f (Prompt a) = Prompt (fmap (fmap f) a)
 
-instance Applicative Prompt where
+instance Applicative ShMonad where
   pure a = Prompt . pure $ Just a
   (Prompt f) <*> (Prompt a) = Prompt (liftM2 (<*>) f a)
 
-instance Monad Prompt where
+instance Monad ShMonad where
   return = pure
   (Prompt a) >>= f = Prompt $ do
     maybeValue <- a
@@ -46,7 +46,7 @@ instance Monad Prompt where
       Nothing -> return Nothing
       Just value -> unPrompt (f value)
 
-instance (Monoid a) => Semigroup (Prompt a) where
+instance (Monoid a) => Semigroup (ShMonad a) where
   (<>) (Prompt a) (Prompt b) =
     Prompt
       ( do
@@ -54,10 +54,10 @@ instance (Monoid a) => Semigroup (Prompt a) where
           return (Just (mconcat (map (fromMaybe mempty) results)))
       )
 
-textModule :: String -> Prompt String
+textModule :: String -> ShMonad String
 textModule s = Prompt (pure $ Just s)
 
-currentDirectoryModule :: Prompt String
+currentDirectoryModule :: ShMonad String
 currentDirectoryModule =
   let f = do
         currentDir <- getCurrentDirectory
@@ -65,7 +65,7 @@ currentDirectoryModule =
         return $ Just lastPart
    in Prompt f
 
-gitBranchModule :: Prompt String
+gitBranchModule :: ShMonad String
 gitBranchModule =
   let f = do
         result <- try (readProcessWithExitCode "git" ["rev-parse", "--abbrev-ref", "HEAD"] "") :: IO (Either SomeException (ExitCode, String, String))
@@ -80,7 +80,7 @@ gitBranchModule =
               else Nothing
    in Prompt f
 
-userModule :: Prompt String
+userModule :: ShMonad String
 userModule = 
   let f = do
         result <- try (getEnv "USER") :: IO (Either SomeException String)
@@ -89,22 +89,22 @@ userModule =
           Right name -> Just name
   in Prompt f
 
-run :: Prompt String -> IO ()
-run (Prompt f) = f >>= \s -> putStr (fromMaybe "" s)
+shmonad :: ShMonad String -> IO ()
+shmonad (Prompt f) = f >>= \s -> putStr (fromMaybe "" s)
 
-textColor :: ColorIntensity -> Color -> Prompt String -> Prompt String
+textColor :: ColorIntensity -> Color -> ShMonad String -> ShMonad String
 textColor intensity color m =
   textModule ("%{" ++ setSGRCode [SetColor Foreground intensity color] ++ "%}")
     <> m
     <> textModule ("%{" ++ setSGRCode [Reset] ++ "%}")
 
-backgroundColor :: ColorIntensity -> Color -> Prompt String -> Prompt String
+backgroundColor :: ColorIntensity -> Color -> ShMonad String -> ShMonad String
 backgroundColor intensity color m =
   textModule ("%{" ++ setSGRCode [SetColor Background intensity color] ++ "%}")
     <> m
     <> textModule ("%{" ++ setSGRCode [Reset] ++ "%}")
 
-timeModule :: Prompt String
+timeModule :: ShMonad String
 timeModule =
   let f = do
         time <- getCurrentTime
@@ -112,22 +112,22 @@ timeModule =
         return $ Just timeStr
    in Prompt f
 
-data Segment = Segment ColorIntensity Color (Prompt String)
+data Segment = Segment ColorIntensity Color (ShMonad String)
 
-segment :: ColorIntensity -> Color -> Prompt String -> Prompt [Segment]
+segment :: ColorIntensity -> Color -> ShMonad String -> ShMonad [Segment]
 segment intensity color prompt = pure [Segment intensity color prompt]
 
-path :: Prompt [Segment] -> Prompt String
+path :: ShMonad [Segment] -> ShMonad String
 path p = p >>= \segments -> pathHelper segments True
 
-pathHelper :: [Segment] -> Bool -> Prompt String
+pathHelper :: [Segment] -> Bool -> ShMonad String
 pathHelper ((Segment intensity color prompt) : segments) isFirst =
   let f (Segment nextIntensity nextColor _) = (nextIntensity, nextColor)
       next = fmap f (safeHead segments)
    in pathSegment intensity color isFirst next prompt <> pathHelper segments False
 pathHelper _ _ = Prompt (pure Nothing)
 
-pathSegment :: ColorIntensity -> Color -> Bool -> Maybe (ColorIntensity, Color) -> Prompt String -> Prompt String
+pathSegment :: ColorIntensity -> Color -> Bool -> Maybe (ColorIntensity, Color) -> ShMonad String -> ShMonad String
 pathSegment intensity color isFirst next m =
   ( if isFirst
       then textColor intensity color (textModule "\xE0B6")

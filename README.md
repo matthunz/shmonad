@@ -1,3 +1,5 @@
+# ShMonad
+
 ![Demo](https://github.com/matthunz/prompt/blob/main/demo.png?raw=true)
 
 A shell prompt with infinite customization.
@@ -12,11 +14,11 @@ A shell prompt with infinite customization.
 By default the CLI will follow the [XDG](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) specification
 and use `$XDG_CONFIG_HOME` for configuration files.
 
-If the path does not yet exist you can start by creating a `prompt` directory in your configuration path.
+If the path does not yet exist you can start by creating a `shmonad` directory in your configuration path.
 For example:
 ```sh
-mkdir -p ~/.config/prompt
-cd ~/.config/prompt
+mkdir -p ~/.config/shmonad
+cd ~/.config/shmonad
 ```
 
 You can then create a new `config.hs` file, which will be the entrypoint of your configuration.
@@ -36,9 +38,9 @@ main = do
 ```
 
 ### Cloning from source
-In your `prompt` configuration directory, you can now clone the latest source code.
+In your `shmonad` configuration directory, you can now clone the latest source code.
 ```sh
-git clone https://github.com/matthunz/prompt
+git clone https://github.com/matthunz/shmonad
 ```
 
 ### Building
@@ -47,13 +49,13 @@ First create a new [stack](https://docs.haskellstack.org/en/stable/) project in 
 stack init
 ```
 
-Then edit your `stack.yml` to include the `prompt` source code.
+Then edit your `stack.yml` to include the `shmonad` source code.
 ```yml
 resolver:
   url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/25.yaml
 
 packages:
-  - prompt
+  - shmonad
 ```
 
 Finally, you can install the CLI with:
@@ -61,15 +63,14 @@ Finally, you can install the CLI with:
 stack install
 ```
 
-### Adding the prompt to your shell
+### Adding ShMonad to your shell
 In your `.zshrc` add
 ```sh
-eval "$(prompt init)"
+eval "$(shmonad init)"
 ```
 
 ## Usage
 You can recompile your configuration by running:
 ```
-prompt --recompile
+shmonad recompile
 ```
-

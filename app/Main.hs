@@ -32,7 +32,7 @@ main = run =<< execParser opts
         (fullDesc <> progDesc "Shell prompt")
 
 appName :: String
-appName = "prompt"
+appName = "shmonad"
 
 run :: Args -> IO ()
 run (Args Default) = runPrompt
@@ -74,7 +74,7 @@ runRecompile = do
   configDir <- getUserConfigDir ""
 
   let binPath = dataDir </> appName
-  let appConfigDir = configDir </> "prompt"
+  let appConfigDir = configDir </> appName
 
   result <-
     try
