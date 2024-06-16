@@ -74,3 +74,10 @@ You can recompile your configuration by running:
 ```
 shmonad recompile
 ```
+
+## Inspiration
+The idea to use Haskell as a configuration language comes from [xmonad](https://xmonad.org) (which works great in tandem with this project!)
+
+Totally check out these other shell prompt projects!
+* [starship-rs](https://starship.rs)
+* [powerline-shell](https://github.com/b-ryan/powerline-shell)
