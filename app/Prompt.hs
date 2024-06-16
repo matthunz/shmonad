@@ -21,28 +21,32 @@ import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath (takeFileName)
 import System.Process (readProcessWithExitCode)
 
+f = []
+
+a = f <*> f
+
 type Module = [IO (Maybe String)]
 
 run :: [IO (Maybe String)] -> IO ()
 run modules = do
   results <- mapConcurrently id modules
   let prompt = concatMap (fromMaybe "") results
-  putStrLn prompt
+  putStr prompt
 
 textModule :: String -> Module
 textModule s = [pure $ Just s]
 
 textColor :: ColorIntensity -> Color -> Module -> Module
 textColor intensity color m =
-  textModule (setSGRCode [SetColor Foreground intensity color])
+  textModule ("%{" ++ setSGRCode [SetColor Foreground intensity color] ++ "%}")
     ++ m
-    ++ textModule (setSGRCode [Reset])
+    ++ textModule ("%{" ++ setSGRCode [Reset] ++ "%}")
 
 backgroundColor :: ColorIntensity -> Color -> Module -> Module
 backgroundColor intensity color m =
-  textModule (setSGRCode [SetColor Background intensity color])
+  textModule ("%{" ++ setSGRCode [SetColor Background intensity color] ++ "%}")
     ++ m
-    ++ textModule (setSGRCode [Reset])
+    ++ textModule ("%{" ++ setSGRCode [Reset] ++ "%}")
 
 currentDirectoryModule :: Module
 currentDirectoryModule =
