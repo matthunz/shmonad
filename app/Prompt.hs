@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Prompt
   ( backgroundColor,
     textColor,
@@ -12,6 +14,7 @@ where
 
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Exception (SomeException, try)
+import Control.Monad (ap, liftM2)
 import Data.Maybe (fromMaybe)
 import Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
 import GHC.IO.Exception (ExitCode)
@@ -21,50 +24,44 @@ import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath (takeFileName)
 import System.Process (readProcessWithExitCode)
 
-f = []
+newtype Prompt a = Prompt {unPrompt :: IO (Maybe a)}
 
-a = f <*> f
+instance Functor Prompt where
+  fmap f (Prompt a) = Prompt (fmap (fmap f) a)
 
-type Module = [IO (Maybe String)]
+instance Applicative Prompt where
+  pure a = Prompt . pure $ Just a
+  (Prompt f) <*> (Prompt a) = Prompt (liftM2 (<*>) f a)
 
-run :: [IO (Maybe String)] -> IO ()
-run modules = do
-  results <- mapConcurrently id modules
-  let prompt = concatMap (fromMaybe "") results
-  putStr prompt
+instance Monad Prompt where
+  return = pure
+  (Prompt a) >>= f = Prompt $ do
+    maybeValue <- a
+    case maybeValue of
+      Nothing -> return Nothing
+      Just value -> unPrompt (f value)
 
-textModule :: String -> Module
-textModule s = [pure $ Just s]
 
-textColor :: ColorIntensity -> Color -> Module -> Module
-textColor intensity color m =
-  textModule ("%{" ++ setSGRCode [SetColor Foreground intensity color] ++ "%}")
-    ++ m
-    ++ textModule ("%{" ++ setSGRCode [Reset] ++ "%}")
+instance (Monoid a) => Semigroup (Prompt a) where
+  (<>) (Prompt a) (Prompt b) =
+    Prompt
+      ( do
+          results <- mapConcurrently id [a, b]
+          return (Just (mconcat (map (fromMaybe mempty) results)))
+      )
 
-backgroundColor :: ColorIntensity -> Color -> Module -> Module
-backgroundColor intensity color m =
-  textModule ("%{" ++ setSGRCode [SetColor Background intensity color] ++ "%}")
-    ++ m
-    ++ textModule ("%{" ++ setSGRCode [Reset] ++ "%}")
+textModule :: String -> Prompt String
+textModule s = Prompt (pure $ Just s)
 
-currentDirectoryModule :: Module
+currentDirectoryModule :: Prompt String
 currentDirectoryModule =
   let f = do
         currentDir <- getCurrentDirectory
         let lastPart = takeFileName currentDir
         return $ Just lastPart
-   in [f]
+   in Prompt f
 
-timeModule :: Module
-timeModule =
-  let f = do
-        time <- getCurrentTime
-        let timeStr = formatTime defaultTimeLocale "%H:%M:%S" time
-        return $ Just timeStr
-   in [f]
-
-gitBranchModule :: Module
+gitBranchModule :: Prompt String
 gitBranchModule =
   let f = do
         result <- try (readProcessWithExitCode "git" ["rev-parse", "--abbrev-ref", "HEAD"] "") :: IO (Either SomeException (ExitCode, String, String))
@@ -77,4 +74,27 @@ gitBranchModule =
                   then Nothing
                   else Just $ init branch
               else Nothing
-   in [f]
+   in Prompt f
+
+run :: Prompt String -> IO ()
+run (Prompt f) = f >>= \s -> putStr (fromMaybe "" s)
+
+textColor :: ColorIntensity -> Color -> Prompt String -> Prompt String
+textColor intensity color m =
+  textModule ("%{" ++ setSGRCode [SetColor Foreground intensity color] ++ "%}")
+    <> m
+    <> textModule ("%{" ++ setSGRCode [Reset] ++ "%}")
+
+backgroundColor :: ColorIntensity -> Color -> Prompt String -> Prompt String
+backgroundColor intensity color m =
+  textModule ("%{" ++ setSGRCode [SetColor Background intensity color] ++ "%}")
+    <> m
+    <> textModule ("%{" ++ setSGRCode [Reset] ++ "%}")
+
+timeModule :: Prompt String
+timeModule =
+  let f = do
+        time <- getCurrentTime
+        let timeStr = formatTime defaultTimeLocale "%H:%M:%S" time
+        return $ Just timeStr
+   in Prompt f
