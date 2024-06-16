@@ -1,3 +1,5 @@
+![Demo](https://github.com/matthunz/prompt/blob/main/demo.png?raw=true)
+
 ## Installation
 
 By default the CLI will follow the [XDG](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) specification
