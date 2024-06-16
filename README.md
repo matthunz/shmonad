@@ -76,8 +76,8 @@ shmonad recompile
 ```
 
 ## Inspiration
-The idea to use Haskell as a configuration language comes from [xmonad](https://xmonad.org) (which works great in tandem with this project!)
+Huge thanks to other shell prompts that inspired this project!
+  * [starship-rs](https://starship.rs)
+  * [powerline-shell](https://github.com/b-ryan/powerline-shell)
 
-Totally check out these other shell prompt projects!
-* [starship-rs](https://starship.rs)
-* [powerline-shell](https://github.com/b-ryan/powerline-shell)
+The idea to use Haskell as a configuration language comes from [xmonad](https://xmonad.org) (which pairs great with this project).
